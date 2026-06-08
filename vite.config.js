@@ -7,9 +7,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/overpass': {
-        target: 'https://overpass-api.de',
+        target: 'https://overpass.openstreetmap.fr',
         changeOrigin: true,
         secure: false,
+        proxyTimeout: 60000,
+        timeout: 60000,
         rewrite: (path) => path.replace(/^\/overpass/, '/api/interpreter'),
       }
     }

@@ -92,39 +92,17 @@ const buildQuery = (lat, lon) => {
     : ''
   const t = filters.value.activityType
 
-  let body = ''
-  if (t === 'museum') {
-    body = `
-      node["tourism"~"museum|gallery"]${wc}["name"](around:${radius},${lat},${lon});
-      way["tourism"~"museum|gallery"]${wc}["name"](around:${radius},${lat},${lon});`
-  } else if (t === 'restaurant') {
-    body = `
-      node["amenity"~"restaurant|cafe|fast_food"]${wc}["name"](around:${radius},${lat},${lon});`
-  } else if (t === 'park') {
-    body = `
-      node["leisure"~"park|garden"]["name"](around:${radius},${lat},${lon});
-      way["leisure"~"park|garden"]["name"](around:${radius},${lat},${lon});`
-  } else if (t === 'theatre') {
-    body = `
-      node["amenity"~"theatre|cinema"]${wc}["name"](around:${radius},${lat},${lon});
-      way["amenity"~"theatre|cinema"]${wc}["name"](around:${radius},${lat},${lon});`
-  } else if (t === 'attraction') {
-    body = `
-      node["tourism"="attraction"]${wc}["name"](around:${radius},${lat},${lon});
-      way["tourism"="attraction"]${wc}["name"](around:${radius},${lat},${lon});`
-  } else if (t === 'hotel') {
-    body = `
-      node["tourism"~"hotel|hostel|guest_house"]${wc}["name"](around:${radius},${lat},${lon});
-      way["tourism"~"hotel|hostel|guest_house"]${wc}["name"](around:${radius},${lat},${lon});`
-  } else {
-    body = `
-      node["tourism"~"museum|attraction|gallery"]${wc}["name"](around:${radius},${lat},${lon});
-      node["leisure"~"park|garden"]["name"](around:${radius},${lat},${lon});
-      node["amenity"~"theatre|cinema"]${wc}["name"](around:${radius},${lat},${lon});
-      way["tourism"~"museum|attraction|gallery"]${wc}["name"](around:${radius},${lat},${lon});
-      way["leisure"~"park|garden"]["name"](around:${radius},${lat},${lon});`
-  }
-  return `[out:json][timeout:30];(${body});out center 25;`
+  let tag = ''
+  if (t === 'museum')     tag = '["tourism"~"museum|gallery"]'
+  else if (t === 'restaurant') tag = '["amenity"~"restaurant|cafe"]'
+  else if (t === 'park')  tag = '["leisure"~"park|garden"]'
+  else if (t === 'theatre') tag = '["amenity"~"theatre|cinema"]'
+  else if (t === 'attraction') tag = '["tourism"="attraction"]'
+  else if (t === 'hotel') tag = '["tourism"~"hotel|hostel"]'
+  else                    tag = '["tourism"~"museum|attraction"]["name"]'
+
+  const body = `node${tag}${wc}["name"](around:${radius},${lat},${lon});`
+  return `[out:json][timeout:25];(${body});out 20;`
 }
 
 const formatHours = (oh) => {
@@ -226,11 +204,7 @@ const fetchPOIs = async () => {
   try {
     const center = map.value.getCenter()
     const query = buildQuery(center.lat, center.lng)
-    const resp = await fetch('/overpass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`
-    })
+    const resp = await fetch(`/overpass?data=${encodeURIComponent(query)}`)
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const data = await resp.json()
     pois.value = data.elements.map(transformElement).filter(Boolean).slice(0, 25)
